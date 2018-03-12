@@ -1,5 +1,7 @@
 package com.company;
 
+import sun.reflect.generics.tree.Tree;
+
 import java.util.*;
 import  java.io.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -11,7 +13,7 @@ public class Main {
 
 
         //int min_supp=Integer.parseInt(args[0]);
-        int min_supp=2;
+        int min_supp=7;
         //int k=Integer.parseInt(args[1]);
         int k =4;
 //        String input_file=args[2];
@@ -20,8 +22,8 @@ public class Main {
         try
         {
             //loading the file
+            //File file = new File("/home/ashna/Desktop/transactionDB.txt");
             File file = new File("/home/ashna/IdeaProjects/PAttern_Mining/src/com/company/sample.txt");
-            //File file = new File("/home/ashna/IdeaProjects/PAttern_Mining/src/com/company/sample.txt");
             //reading the file
             BufferedReader b= new BufferedReader(new FileReader(file));
             //output file
@@ -59,15 +61,15 @@ public class Main {
             candidateSet1 = first_candidate_generation(transactionsList,candidateSet1);
 
             //generating frequencySet-1
-            Map<Set<Integer>,Integer> frequencySet1 ;
+            Map<TreeSet<Integer>,Integer> frequencySet1 ;
             frequencySet1=first_frequencyset_generation(candidateSet1,min_supp);
-candidateSet1.clear();
+            candidateSet1.clear();
 
             //generating other candidateSet with frequency
             for(int i=2;i<k;i++){
                 Map<TreeSet<Integer>,Integer> candidate_set ;
 
-                    candidate_set =candidate_generation(frequencySet1,transactionsList);
+                candidate_set =candidate_generation(frequencySet1,transactionsList,i);
 
 
                 frequencySet1.clear();
@@ -81,18 +83,8 @@ candidateSet1.clear();
             }
 
 
+            final_output(idHashMap,frequencySet1);
 
-            //converting integer to strings to print
-//            for(Set s:frequency_set.keySet()){
-//                for(Iterator<Integer> it = s.iterator(); it.hasNext();){
-//                   for(Map.Entry m:idHashMap.entrySet()){
-//                       if(m.getValue()==it){
-//                           System.out.print(m.getKey());
-//                       }
-//                   }
-//                   System.out.print("("+frequency_set.get(s)+")");
-//                }
-//            }
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -113,55 +105,67 @@ candidateSet1.clear();
         return candidateSet1;
     }
 
-    static Map<Set<Integer>,Integer> first_frequencyset_generation(Map<Integer,Integer> candidateSet1,int min_supp){
-        Map<Set<Integer>,Integer> frequencySet1= new HashMap<Set<Integer>,Integer>();
+    static Map<TreeSet<Integer>,Integer> first_frequencyset_generation(Map<Integer,Integer> candidateSet1,int min_supp){
+        Map<TreeSet<Integer>,Integer> frequencySet1= new HashMap<TreeSet<Integer>,Integer>();
         for(Map.Entry m:candidateSet1.entrySet()){
             int value1 = Integer.parseInt(m.getValue().toString());
             if(value1 >= min_supp){
-                Set<Integer> newSet = new TreeSet<Integer>();
+                TreeSet<Integer> newSet = new TreeSet<Integer>();
                 newSet.add(Integer.parseInt(m.getKey().toString()));
                 frequencySet1.put(newSet,value1);
             }
         }
-
+//System.out.println("1st Frequency size=="+frequencySet1.size());
         return frequencySet1;
     }
 
-    static Map<TreeSet<Integer>,Integer> candidate_generation(Map<Set<Integer>,Integer> frequencySet1,
-                                    List<Set<Integer>> transactionsList){
+    static Map<TreeSet<Integer>,Integer> candidate_generation(Map<TreeSet<Integer>,Integer> frequencySet1,
+                                                              List<Set<Integer>> transactionsList,int k){
         Map<TreeSet<Integer>,Integer> candidate_set = new ConcurrentHashMap<TreeSet<Integer>,Integer>();
         List<TreeSet<Integer>> newList = new ArrayList<TreeSet<Integer>>();
-        for(Set s : frequencySet1.keySet()){
-               for(Set s1:frequencySet1.keySet()){
-                   if(!s.containsAll(s1)){
-                       TreeSet<Integer> unionSet = new TreeSet<Integer>(s);
-                       unionSet.addAll(s1);
-                       if(!newList.contains(unionSet))
-                           newList.add(unionSet);
-                   }
-               }
+//int count=1;
 
+        for(Set s : frequencySet1.keySet()){
+            for(Set s1:frequencySet1.keySet()){
+                TreeSet<Integer> unionSet = new TreeSet<Integer>(s);
+                if(s.size() == 1){
+                    if(!s.containsAll(s1)) {
+                        unionSet.addAll(s1);
+                        if (!newList.contains(unionSet))
+                            newList.add(unionSet);
+                    }
+                }else{
+                    TreeSet<Integer> unionSet1 = new TreeSet<Integer>(s);
+                    if(unionSet1.retainAll(s1)) {
+                        if (unionSet1.size() > 0) {
+                            unionSet.addAll(s1);
+                            if (!newList.contains(unionSet))
+                                newList.add(unionSet);
+
+                        }
+                    }
+                }
+
+            }
+            //System.out.println("count==="+count);
+   //         count++;
         }
+
 
         for(Set s:newList){
             System.out.println("newList"+s);
         }
-
+//System.out.println("newlist size ---"+newList.size());
         candidate_set  = count_frequency(newList,candidate_set,transactionsList);
-
-
-
-
-
-
-
-
-
-return candidate_set;
+        if(k>2){
+            candidate_set = pruning_step(candidate_set,frequencySet1);
+        }
+        return candidate_set;
     }
 
     static Map<TreeSet<Integer>,Integer> count_frequency(List<TreeSet<Integer>> newList,Map<TreeSet<Integer>,Integer> candidate_set,
-                                List<Set<Integer>> transactionsList) {
+                                                         List<Set<Integer>> transactionsList) {
+     //  int frequency = 1;
         for (TreeSet<Integer> s : newList) {
             for (Set ts : transactionsList) {
                 Set<Integer> intersectionSet = new TreeSet<Integer>(ts);
@@ -195,9 +199,11 @@ return candidate_set;
                 }
 
             }
+            //System.out.println("frequency count ---"+frequency);
+       //     frequency++;
         }
         //printing_candidate_set(candidate_set);
-return candidate_set;
+        return candidate_set;
     }
 
 
@@ -208,14 +214,77 @@ return candidate_set;
         }
     }
 
-    static Map<Set<Integer>,Integer> frequency_generataion(Map<TreeSet<Integer>,Integer> candidate_set,int min_supp){
-        Map<Set<Integer>,Integer> frequencySet = new HashMap<Set<Integer>,Integer>();
+    static Map<TreeSet<Integer>,Integer> frequency_generataion(Map<TreeSet<Integer>,Integer> candidate_set,int min_supp){
+        Map<TreeSet<Integer>,Integer> frequencySet = new HashMap<TreeSet<Integer>,Integer>();
         for(TreeSet<Integer> m1: candidate_set.keySet()){
             if(candidate_set.get(m1) >= min_supp){
                 frequencySet.put(m1,candidate_set.get(m1));
             }
         }
-
+        //System.out.println("new generated frequency set size---"+frequencySet.size());
         return  frequencySet;
+
+
+    }
+
+    static Map<TreeSet<Integer>,Integer> pruning_step(Map<TreeSet<Integer>,Integer> candidate_set,Map<TreeSet<Integer>,Integer> frequencySet){
+
+        for(TreeSet<Integer> t:candidate_set.keySet()){
+            HashSet<TreeSet<Integer>> sets;
+            sets =  findPowerSet(t);
+            HashSet<TreeSet<Integer>> copySets = new HashSet<TreeSet<Integer>>(sets);
+            for(TreeSet<Integer> t1:copySets){
+                if(!(t1.size() == t.size()-1)){
+                    sets.remove(t1);
+                }
+            }
+
+            for(TreeSet<Integer> ss : sets){
+                if(!frequencySet.keySet().contains(ss)){
+                    candidate_set.remove(t);
+                }
+            }
+
+
+
+        }
+        return candidate_set;
+    }
+
+
+
+    static  HashSet<TreeSet<Integer>> findPowerSet(TreeSet<Integer> t){
+       // System.out.println("In power set");
+        HashSet<TreeSet<Integer>> sets = new HashSet<TreeSet<Integer>>() ;
+        if (t.isEmpty()) {
+            sets.add(new TreeSet<Integer>());
+            return sets;
+        }
+        List<Integer> list = new ArrayList<Integer>(t);
+        Integer head = list.get(0);
+        TreeSet<Integer> rest = new TreeSet<Integer>(list.subList(1, list.size()));
+        for (TreeSet<Integer> set : findPowerSet(rest)) {
+            TreeSet<Integer> newSet = new TreeSet<Integer>();
+            newSet.add(head);
+            newSet.addAll(set);
+            sets.add(newSet);
+            sets.add(set);
+        }
+        return sets;
+    }
+
+    static void final_output(Map<String,Integer> idHashMap, Map<TreeSet<Integer>,Integer> frequency_set){
+        for(TreeSet<Integer> t: frequency_set.keySet()){
+            for(Integer i:t){
+                for(Map.Entry m:idHashMap.entrySet()){
+                    if(m.getValue()==i){
+                        System.out.print(m.getKey()+" ");
+                    }
+                }
+            }
+
+            System.out.print("("+frequency_set.get(t)+")");
+        }
+
     }
 }
