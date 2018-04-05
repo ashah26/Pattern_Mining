@@ -1,4 +1,4 @@
-package com.company;
+
 
 import java.io.*;
 import java.util.*;
@@ -40,7 +40,7 @@ public class AprioriAlgorithm {
             outputFilePath = args[3];
         }else{
             //default values
-            min_support = 9;
+            min_support = 6;
             k=2;
             inputFilePath ="/home/ashna/IdeaProjects/PAttern_Mining/transactionDB.txt";
             outputFilePath = "/home/ashna/Desktop/output.txt";
